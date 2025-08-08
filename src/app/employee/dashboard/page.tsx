@@ -16,8 +16,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { tasks } from "@/lib/data";
 
-// In a real app, you'd get the logged-in employee's ID
-const LOGGED_IN_EMPLOYEE_ID = 'emp-001';
 
 export default function EmployeeDashboardPage() {
   const myTasks = tasks.filter(task => task.assignedTo === LOGGED_IN_EMPLOYEE_ID);
