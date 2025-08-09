@@ -12,25 +12,33 @@ import axios from 'axios';
 export default function EmployerSignupPage() {
   const router = useRouter();
   const [user, setUser] = useState({
+    cid: "",
+    name: "",
     email: "",
     password: "",
-    role: "manager"
+    role: "mngr" 
+     // Changed to match your schema
   });
   const [buttonDisabled, setButtonDisabled] = useState(true);
 
   const onSignup = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("/api/signup", user);
+      const response = await axios.post("/api/users/signup", user);
       console.log("Signup success", response.data);
-      router.push("/login");
+      router.push("/manager/login");
     } catch (error) {
       console.error("Signup failed", error);
     }
   };
 
   useEffect(() => {
-    setButtonDisabled(!(user.email.length > 0 && user.password.length > 0));
+    setButtonDisabled(!(
+      user.cid.length > 0 && 
+      user.name.length > 0 && 
+      user.email.length > 0 && 
+      user.password.length > 0
+    ));
   }, [user]);
 
   return (
@@ -40,11 +48,33 @@ export default function EmployerSignupPage() {
           <div className="mx-auto">
             <Logo />
           </div>
-          <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
-          <CardDescription>Enter your details to create your employer account.</CardDescription>
+          <CardTitle className="text-2xl font-headline">Create Manager Account</CardTitle>
+          <CardDescription>Enter your details to create your manager account.</CardDescription>
         </CardHeader>
         <form onSubmit={onSignup}>
           <CardContent className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="cid">Company ID</Label>
+              <Input 
+                id="cid"
+                type="text"
+                placeholder="Your company ID"
+                value={user.cid}
+                onChange={(e) => setUser({ ...user, cid: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input 
+                id="name"
+                type="text"
+                placeholder="John Doe"
+                value={user.name}
+                onChange={(e) => setUser({ ...user, name: e.target.value })}
+                required
+              />
+            </div>
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input 
@@ -69,11 +99,11 @@ export default function EmployerSignupPage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button className="w-full" type="submit" disabled={buttonDisabled}>
-              {buttonDisabled ? "No Signup" : "Signup"}
+              {buttonDisabled ? "Fill All Fields" : "Create Account"}
             </Button>
             <div className="text-center text-sm">
               Already have an account?{" "}
-              <Link href="/login" className="underline text-primary">
+              <Link href="/manager/login" className="underline text-primary">
                 Login
               </Link>
             </div>

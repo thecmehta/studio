@@ -20,7 +20,7 @@ export default function Home() {
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <Card className="transform transition-transform duration-300 hover:scale-105 hover:shadow-xl">
-            <Link href="/login" className="h-full flex flex-col">
+            <Link href="/manager/login" className="h-full flex flex-col">
               <CardHeader className="items-center text-center">
                 <Briefcase className="h-10 w-10 text-primary" />
                 <CardTitle className="font-headline">Employer Portal</CardTitle>

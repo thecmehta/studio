@@ -3,18 +3,20 @@
 import { useRouter } from "next/navigation"; 
 import React, { useState } from 'react';
 
-export default function EmployeeCreationForm() {
+export default function addEmploys() {
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
     password: '',
     role: "emp",
+    cid: '', // Add company/client ID
   });
   const router = useRouter();
   
   const backToDashboard = () => {
     console.log("Back Button Clicked - navigating to dashboard");
     try {
-      router.push('../dashboard');
+      router.push('/dashboard/manager');
       console.log("Navigation to dashboard initiated successfully");
     } catch (error) {
       console.error("Error navigating to dashboard:", error);
@@ -50,6 +52,13 @@ export default function EmployeeCreationForm() {
     setMessage('');
     
     // Client-side validation
+    if (!formData.name.trim()) {
+      setMessage('Please enter employee name');
+      setIsSuccess(false);
+      setIsLoading(false);
+      return;
+    }
+
     if (!isValidEmail(formData.email)) {
       setMessage('Please enter a valid email address');
       setIsSuccess(false);
@@ -63,15 +72,24 @@ export default function EmployeeCreationForm() {
       setIsLoading(false);
       return;
     }
+
+    if (!formData.cid.trim()) {
+      setMessage('Please enter company ID');
+      setIsSuccess(false);
+      setIsLoading(false);
+      return;
+    }
     
     try {
       const requestBody = {
+        name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password.trim(),
         role: formData.role.trim(),
+        cid: formData.cid.trim(),
       };
 
-      const response = await fetch('/api/signup', {
+      const response = await fetch('/api/users/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,9 +104,11 @@ export default function EmployeeCreationForm() {
         setIsSuccess(true);
         // Reset form
         setFormData({
+          name: '',
           email: '',
           password: '',
-          role: 'emp'
+          role: 'emp',
+          cid: ''
         });
       } else {
         setMessage(data.error || 'Failed to add employee');
@@ -105,14 +125,16 @@ export default function EmployeeCreationForm() {
 
   const handleClearForm = () => {
     setFormData({
+      name: '',
       email: '',
       password: '',
-      role: 'emp'
+      role: 'emp',
+      cid: ''
     });
     setMessage('');
   };
 
-  const isFormValid = formData.email.trim() && formData.password.trim() && 
+  const isFormValid = formData.name.trim() && formData.email.trim() && formData.password.trim() && formData.cid.trim() &&
                      isValidEmail(formData.email) && isValidPassword(formData.password);
 
   return (
@@ -140,6 +162,22 @@ export default function EmployeeCreationForm() {
       <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Add New Employee</h2>
       
       <div className="space-y-4">
+        {/* Name Field */}
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+            Full Name *
+          </label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            value={formData.name}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter employee full name"
+          />
+        </div>
+
         {/* Email Field */}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -176,6 +214,22 @@ export default function EmployeeCreationForm() {
           {formData.password && !isValidPassword(formData.password) && (
             <p className="text-xs text-red-500 mt-1">Password must be at least 6 characters long</p>
           )}
+        </div>
+
+        {/* Company ID Field */}
+        <div>
+          <label htmlFor="cid" className="block text-sm font-medium text-gray-700 mb-1">
+            Company ID *
+          </label>
+          <input
+            type="text"
+            id="cid"
+            name="cid"
+            value={formData.cid}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter company ID"
+          />
         </div>
 
         {/* Role Field (Read-only for now) */}

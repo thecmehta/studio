@@ -7,7 +7,7 @@ export default function TaskCreationForm() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    assignTo: '',
+    assignedTo: '',
   });
   const [employees, setEmployees] = useState([]);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
@@ -18,11 +18,13 @@ export default function TaskCreationForm() {
     const fetchEmployees = async () => {
       setIsLoadingEmployees(true);
       try {
-        const response = await fetch('/api/signup');
+        const response = await fetch('/api/users');
         const data = await response.json();
         console.log('Fetched employees:', data);
         if (data.success) {
-          setEmployees(data.users);
+          // Filter only employees with role 'emp'
+          const filteredEmployees = data.users.filter(user => user.role === 'emp');
+          setEmployees(filteredEmployees);
         }
       } catch (error) {
         console.error("Failed to fetch employees:", error);
@@ -42,6 +44,7 @@ export default function TaskCreationForm() {
       console.error("Error navigating to add task page:", error);
     }
   };
+  
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
@@ -60,8 +63,8 @@ export default function TaskCreationForm() {
     setMessage('');
     
     // Client-side validation
-    if (!formData.title.trim() || !formData.description.trim() || !formData.assignTo.trim()) {
-      setMessage('Title, description, and assignTo are required fields');
+    if (!formData.title.trim() || !formData.description.trim() || !formData.assignedTo.trim()) {
+      setMessage('Title, description, and assignedTo are required fields');
       setIsSuccess(false);
       setIsLoading(false);
       return;
@@ -71,7 +74,7 @@ export default function TaskCreationForm() {
       const requestBody = {
         title: formData.title.trim(),
         description: formData.description.trim(),
-        assignTo: formData.assignTo.trim(),
+        assignedTo: formData.assignedTo.trim(),
         ...(formData.dueDate && { dueDate: formData.dueDate })
       };
 
@@ -92,7 +95,7 @@ export default function TaskCreationForm() {
         setFormData({
           title: '',
           description: '',
-          assignTo: ''
+          assignedTo: ''
         });
       } else {
         setMessage(data.error || 'Failed to create task');
@@ -111,12 +114,12 @@ export default function TaskCreationForm() {
     setFormData({
       title: '',
       description: '',
-      assignTo: ''
+      assignedTo: ''
     });
     setMessage('');
   };
 
-  const isFormValid = formData.title.trim() && formData.description.trim() && formData.assignTo.trim();
+  const isFormValid = formData.title.trim() && formData.description.trim() && formData.assignedTo.trim();
 
   return (
     <div className="max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg">
@@ -182,7 +185,7 @@ export default function TaskCreationForm() {
 
         {/* Assign To Field - Now a Dropdown */}
         <div>
-          <label htmlFor="assignTo" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="assignedTo" className="block text-sm font-medium text-gray-700 mb-1">
             Assign To *
           </label>
           {isLoadingEmployees ? (
@@ -195,16 +198,16 @@ export default function TaskCreationForm() {
             </div>
           ) : (
             <select
-              id="assignTo"
-              name="assignTo"
-              value={formData.assignTo}
+              id="assignedTo"
+              name="assignedTo"
+              value={formData.assignedTo}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Select an employee</option>
               {employees.map((employee) => (
                 <option key={employee._id} value={employee.email}>
-                  {employee.email}
+                  {employee.name} ({employee.email})
                 </option>
               ))}
             </select>
