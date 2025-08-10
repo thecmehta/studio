@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, PlusCircle, Users, AlertCircle } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Users, AlertCircle, FileText } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -238,8 +238,18 @@ export default function TasksPage() {
               <div className="text-muted-foreground">Loading tasks...</div>
             </div>
           ) : !Array.isArray(tasks) || tasks.length === 0 ? (
-            <div className="flex justify-center py-8">
-              <div className="text-muted-foreground">No tasks found</div>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="rounded-full bg-muted/50 p-4 mb-4">
+                <FileText className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">No tasks assigned yet</h3>
+              <p className="text-muted-foreground mb-4 max-w-sm">
+                Get started by creating and assigning tasks to your team members.
+              </p>
+              <Button onClick={handleNavigateToAddTask} className="gap-2">
+                <PlusCircle className="h-4 w-4" />
+                Create Your First Task
+              </Button>
             </div>
           ) : (
             <Table>
@@ -355,8 +365,18 @@ export default function TasksPage() {
               <div className="text-muted-foreground">Loading employees...</div>
             </div>
           ) : !Array.isArray(employees) || employees.length === 0 ? (
-            <div className="flex justify-center py-8">
-              <div className="text-muted-foreground">No employees found</div>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="rounded-full bg-muted/50 p-4 mb-4">
+                <Users className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">No employees found</h3>
+              <p className="text-muted-foreground mb-4 max-w-sm">
+                Start building your team by adding employee accounts.
+              </p>
+              <Button onClick={handleNavigateToAddEmployee} className="gap-2">
+                <Users className="h-4 w-4" />
+                Add Your First Employee
+              </Button>
             </div>
             ) : (
             <Table>
