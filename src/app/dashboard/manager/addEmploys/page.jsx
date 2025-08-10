@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation"; 
 import React, { useState } from 'react';
 
-export default function addEmploys() {
+export default function AddEmployee() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
