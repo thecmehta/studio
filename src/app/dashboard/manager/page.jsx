@@ -43,16 +43,23 @@ export default function TasksPage() {
       setIsLoadingTasks(true);
       try {
         const response = await fetch('/api/tasks');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
-        console.log(data.tasks);
-        if (data.success) {
+        console.log('Tasks data:', data);
+        
+        if (data.success && Array.isArray(data.tasks)) {
           setTasks(data.tasks);
         } else {
+          console.warn('Tasks data is not an array:', data.tasks);
+          setTasks([]); // Fallback to empty array
           setError(data.error || 'Failed to fetch tasks');
         }
       } catch (error) {
         console.error("Failed to fetch tasks:", error);
         setError('Failed to fetch tasks');
+        setTasks([]); // Ensure tasks is always an array
       } finally {
         setIsLoadingTasks(false);
       }
@@ -64,23 +71,30 @@ export default function TasksPage() {
     const fetchEmployees = async () => {
       setIsLoadingEmployees(true);
       try {
-        // Changed from /api/signup to /api/users
         const response = await fetch('/api/users');
-        const data = await response.json();
-        console.log(data.users);
-        if (data.success) {
-          setEmployees(data.users);
-        } else {
+        if (!response.ok) {
           if (response.status === 401) {
             setError('Please login to access this page');
             router.push('/login');
-          } else {
-            setError(data.error || 'Failed to fetch employees');
+            return;
           }
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Employees data:', data);
+        
+        if (data.success && Array.isArray(data.users)) {
+          setEmployees(data.users);
+        } else {
+          console.warn('Employees data is not an array:', data.users);
+          setEmployees([]); // Fallback to empty array
+          setError(data.error || 'Failed to fetch employees');
         }
       } catch (error) {
         console.error("Failed to fetch employees:", error);
         setError('Failed to fetch employees');
+        setEmployees([]); // Ensure employees is always an array
       } finally {
         setIsLoadingEmployees(false);
       }
@@ -102,7 +116,7 @@ export default function TasksPage() {
     }
 
     // Optimistically update UI
-    setTasks(prevTasks => prevTasks.filter(task => task._id !== taskId));
+    setTasks(prevTasks => (Array.isArray(prevTasks) ? prevTasks.filter(task => task._id !== taskId) : []));
 
     try {
       const response = await fetch(`/api/tasks/${taskId}`, {
@@ -113,7 +127,7 @@ export default function TasksPage() {
         // Revert optimistic update on failure
         const refreshResponse = await fetch('/api/tasks');
         const refreshData = await refreshResponse.json();
-        if (refreshData.success) {
+        if (refreshData.success && Array.isArray(refreshData.tasks)) {
           setTasks(refreshData.tasks);
         }
         alert("Failed to delete the task on the server.");
@@ -121,10 +135,14 @@ export default function TasksPage() {
     } catch (error) {
       console.error("Error deleting task:", error);
       // Revert optimistic update on error
-      const refreshResponse = await fetch('/api/tasks');
-      const refreshData = await refreshResponse.json();
-      if (refreshData.success) {
-        setTasks(refreshData.tasks);
+      try {
+        const refreshResponse = await fetch('/api/tasks');
+        const refreshData = await refreshResponse.json();
+        if (refreshData.success && Array.isArray(refreshData.tasks)) {
+          setTasks(refreshData.tasks);
+        }
+      } catch (refreshError) {
+        console.error("Error refreshing tasks:", refreshError);
       }
       alert("An error occurred while deleting the task.");
     }
@@ -136,7 +154,7 @@ export default function TasksPage() {
     }
 
     // Optimistically update UI
-    setEmployees(prevEmployees => prevEmployees.filter(employee => employee._id !== employeeId));
+    setEmployees(prevEmployees => (Array.isArray(prevEmployees) ? prevEmployees.filter(employee => employee._id !== employeeId) : []));
 
     try {
       const response = await fetch(`/api/users/${employeeId}`, {
@@ -147,7 +165,7 @@ export default function TasksPage() {
         // Revert optimistic update on failure
         const refreshResponse = await fetch('/api/users');
         const refreshData = await refreshResponse.json();
-        if (refreshData.success) {
+        if (refreshData.success && Array.isArray(refreshData.users)) {
           setEmployees(refreshData.users);
         }
         alert(data.error || "Failed to delete the employee on the server.");
@@ -155,10 +173,14 @@ export default function TasksPage() {
     } catch (error) {
       console.error("Error deleting employee:", error);
       // Revert optimistic update on error
-      const refreshResponse = await fetch('/api/users');
-      const refreshData = await refreshResponse.json();
-      if (refreshData.success) {
-        setEmployees(refreshData.users);
+      try {
+        const refreshResponse = await fetch('/api/users');
+        const refreshData = await refreshResponse.json();
+        if (refreshData.success && Array.isArray(refreshData.users)) {
+          setEmployees(refreshData.users);
+        }
+      } catch (refreshError) {
+        console.error("Error refreshing employees:", refreshError);
       }
       alert("An error occurred while deleting the employee.");
     }
@@ -166,14 +188,21 @@ export default function TasksPage() {
 
   // Helper function to get employee name from assignedTo field
   const getEmployeeName = (assignedTo) => {
+    // Safety check
+    if (!assignedTo) return 'Unknown';
+    
     // If assignedTo is an email, return it
-    if (assignedTo && assignedTo.includes('@')) {
+    if (typeof assignedTo === 'string' && assignedTo.includes('@')) {
       return assignedTo;
     }
     
     // If it's a user ID, try to find the employee
-    const employee = employees.find(emp => emp._id === assignedTo || emp.email === assignedTo);
-    return employee ? employee.email : assignedTo || 'Unknown';
+    if (Array.isArray(employees)) {
+      const employee = employees.find(emp => emp._id === assignedTo || emp.email === assignedTo);
+      return employee ? employee.email : assignedTo;
+    }
+    
+    return assignedTo || 'Unknown';
   };
 
   if (error) {
@@ -208,7 +237,7 @@ export default function TasksPage() {
             <div className="flex justify-center py-8">
               <div className="text-muted-foreground">Loading tasks...</div>
             </div>
-          ) : tasks.length === 0 ? (
+          ) : !Array.isArray(tasks) || tasks.length === 0 ? (
             <div className="flex justify-center py-8">
               <div className="text-muted-foreground">No tasks found</div>
             </div>
@@ -228,13 +257,13 @@ export default function TasksPage() {
               </TableHeader>
               <TableBody>
                 {tasks.map((task) => {
-                  const employeeName = getEmployeeName(task.assignedTo);
+                  const employeeName = getEmployeeName(task?.assignedTo);
                   return (
-                    <TableRow key={task._id}>
+                    <TableRow key={task?._id || Math.random()}>
                       <TableCell className="font-medium">
                         <div>
-                          <div>{task.title}</div>
-                          {task.description && (
+                          <div>{task?.title || 'Untitled Task'}</div>
+                          {task?.description && (
                             <div className="text-sm text-muted-foreground mt-1">
                               {task.description.length > 50 
                                 ? task.description.substring(0, 50) + '...'
@@ -257,24 +286,24 @@ export default function TasksPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={
-                          task.status === 'completed' ? 'default' :
-                          task.status === 'in-progress' ? 'secondary' :
+                          task?.status === 'completed' ? 'default' :
+                          task?.status === 'in-progress' ? 'secondary' :
                           'outline'
                         }>
-                          {task.status}
+                          {task?.status || 'pending'}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant={
-                          task.priority === 'high' ? 'destructive' :
-                          task.priority === 'medium' ? 'default' :
+                          task?.priority === 'high' ? 'destructive' :
+                          task?.priority === 'medium' ? 'default' :
                           'secondary'
                         }>
-                          {task.priority}
+                          {task?.priority || 'low'}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
+                        {task?.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -289,7 +318,7 @@ export default function TasksPage() {
                             <DropdownMenuItem>Mark as Complete</DropdownMenuItem>
                             <DropdownMenuItem>Edit Task</DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => handleDeleteTask(task._id)}
+                              onClick={() => handleDeleteTask(task?._id)}
                               className="text-destructive"
                             >
                               Delete
@@ -325,7 +354,7 @@ export default function TasksPage() {
             <div className="flex justify-center py-8">
               <div className="text-muted-foreground">Loading employees...</div>
             </div>
-          ) : employees.length === 0 ? (
+          ) : !Array.isArray(employees) || employees.length === 0 ? (
             <div className="flex justify-center py-8">
               <div className="text-muted-foreground">No employees found</div>
             </div>
@@ -344,24 +373,24 @@ export default function TasksPage() {
               </TableHeader>
               <TableBody>
                 {employees.map((employee) => (
-                  <TableRow key={employee._id}>
+                  <TableRow key={employee?._id || Math.random()}>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={``} alt={employee.name} />
-                          <AvatarFallback>{employee.name?.charAt(0)?.toUpperCase()}</AvatarFallback>
+                          <AvatarImage src={``} alt={employee?.name} />
+                          <AvatarFallback>{employee?.name?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
                         </Avatar>
-                        <span className="font-medium">{employee.name}</span>
+                        <span className="font-medium">{employee?.name || 'Unknown'}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{employee.email}</TableCell>
+                    <TableCell>{employee?.email || 'No email'}</TableCell>
                     <TableCell>
-                      <Badge variant={employee.role === 'mngr' ? 'default' : 'secondary'}>
-                        {employee.role === 'mngr' ? 'Manager' : 'Employee'}
+                      <Badge variant={employee?.role === 'mngr' ? 'default' : 'secondary'}>
+                        {employee?.role === 'mngr' ? 'Manager' : 'Employee'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm text-muted-foreground">{employee.cid}</span>
+                      <span className="text-sm text-muted-foreground">{employee?.cid || 'No ID'}</span>
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -376,7 +405,7 @@ export default function TasksPage() {
                           <DropdownMenuItem>Edit Employee</DropdownMenuItem>
                           <DropdownMenuItem>Reset Password</DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleDeleteEmployee(employee._id)}
+                            onClick={() => handleDeleteEmployee(employee?._id)}
                             className="text-destructive"
                           >
                             Delete
