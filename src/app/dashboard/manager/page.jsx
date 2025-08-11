@@ -38,38 +38,129 @@ export default function TasksPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
+  // Helper function to refresh tasks
+  const refreshTasks = async () => {
+    try {
+      const refreshResponse = await fetch('/api/tasks');
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json();
+        console.log('Refresh tasks data:', refreshData);
+        
+        if (refreshData.success) {
+          // Handle nested structure (with pagination)
+          if (refreshData.data && Array.isArray(refreshData.data.tasks)) {
+            setTasks(refreshData.data.tasks);
+          } 
+          // Handle direct structure (fallback)
+          else if (Array.isArray(refreshData.tasks)) {
+            setTasks(refreshData.tasks);
+          } 
+          // Handle empty or unexpected structure
+          else {
+            console.log('No tasks in refresh response');
+            setTasks([]);
+          }
+        } else {
+          console.warn('Refresh API returned success: false');
+          setTasks([]);
+        }
+      } else {
+        console.error('Refresh response not ok:', refreshResponse.status);
+        setTasks([]);
+      }
+    } catch (refreshError) {
+      console.error("Error refreshing tasks:", refreshError);
+      setTasks([]);
+    }
+  };
+
+  // Helper function to refresh employees
+  const refreshEmployees = async () => {
+    try {
+      const refreshResponse = await fetch('/api/users');
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json();
+        console.log('Refresh employees data:', refreshData);
+        
+        if (refreshData.success) {
+          // Handle nested structure
+          if (refreshData.data && Array.isArray(refreshData.data.users)) {
+            setEmployees(refreshData.data.users);
+          }
+          // Handle direct structure (fallback)
+          else if (Array.isArray(refreshData.users)) {
+            setEmployees(refreshData.users);
+          }
+          // Handle empty or unexpected structure
+          else {
+            console.log('No employees in refresh response');
+            setEmployees([]);
+          }
+        } else {
+          console.warn('Refresh employees API returned success: false');
+          setEmployees([]);
+        }
+      } else {
+        console.error('Refresh employees response not ok:', refreshResponse.status);
+        setEmployees([]);
+      }
+    } catch (refreshError) {
+      console.error("Error refreshing employees:", refreshError);
+      setEmployees([]);
+    }
+  };
+
   useEffect(() => {
     const fetchTasks = async () => {
       setIsLoadingTasks(true);
+      setError(''); // Clear any previous errors
+      
       try {
         const response = await fetch('/api/tasks');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
         const data = await response.json();
         console.log('Tasks data:', data);
         
-        if (data.success && Array.isArray(data.tasks)) {
-          setTasks(data.tasks);
+        if (data.success) {
+          // Handle nested structure (with pagination)
+          if (data.data && Array.isArray(data.data.tasks)) {
+            setTasks(data.data.tasks);
+            console.log('Set tasks from data.data.tasks:', data.data.tasks.length);
+          } 
+          // Handle direct structure (fallback)
+          else if (Array.isArray(data.tasks)) {
+            setTasks(data.tasks);
+            console.log('Set tasks from data.tasks:', data.tasks.length);
+          } 
+          // Handle empty or unexpected structure
+          else {
+            console.log('No tasks found or unexpected structure, setting empty array');
+            setTasks([]);
+          }
         } else {
-          console.warn('Tasks data is not an array:', data.tasks);
-          setTasks([]); // Fallback to empty array
+          console.warn('API returned success: false:', data);
+          setTasks([]);
           setError(data.error || 'Failed to fetch tasks');
         }
       } catch (error) {
         console.error("Failed to fetch tasks:", error);
-        setError('Failed to fetch tasks');
-        setTasks([]); // Ensure tasks is always an array
+        setError(`Failed to fetch tasks: ${error.message}`);
+        setTasks([]);
       } finally {
         setIsLoadingTasks(false);
       }
     };
+
     fetchTasks();
   }, []);
 
   useEffect(() => {
     const fetchEmployees = async () => {
       setIsLoadingEmployees(true);
+      
       try {
         const response = await fetch('/api/users');
         if (!response.ok) {
@@ -84,23 +175,40 @@ export default function TasksPage() {
         const data = await response.json();
         console.log('Employees data:', data);
         
-        if (data.success && Array.isArray(data.users)) {
-          setEmployees(data.users);
+        if (data.success) {
+          // Handle nested structure
+          if (data.data && Array.isArray(data.data.users)) {
+            setEmployees(data.data.users);
+          }
+          // Handle direct structure (fallback)
+          else if (Array.isArray(data.users)) {
+            setEmployees(data.users);
+          }
+          // Handle empty or unexpected structure
+          else {
+            console.log('No employees found or unexpected structure');
+            setEmployees([]);
+          }
         } else {
-          console.warn('Employees data is not an array:', data.users);
-          setEmployees([]); // Fallback to empty array
-          setError(data.error || 'Failed to fetch employees');
+          console.warn('Employees API returned success: false:', data);
+          setEmployees([]);
+          if (!error) { // Don't overwrite existing errors
+            setError(data.error || 'Failed to fetch employees');
+          }
         }
       } catch (error) {
         console.error("Failed to fetch employees:", error);
-        setError('Failed to fetch employees');
-        setEmployees([]); // Ensure employees is always an array
+        setEmployees([]);
+        if (!error) { // Don't overwrite existing errors
+          setError(`Failed to fetch employees: ${error.message}`);
+        }
       } finally {
         setIsLoadingEmployees(false);
       }
     };
+
     fetchEmployees();
-  }, [router]);
+  }, [router, error]); // Added error to dependencies to prevent overwriting
 
   const handleNavigateToAddTask = () => {
     router.push('/dashboard/manager/tasks/addtask');
@@ -111,77 +219,79 @@ export default function TasksPage() {
   };
 
   const handleDeleteTask = async (taskId) => {
+    if (!taskId) {
+      console.error('No task ID provided for deletion');
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this task?")) {
       return;
     }
 
     // Optimistically update UI
+    const previousTasks = tasks;
     setTasks(prevTasks => (Array.isArray(prevTasks) ? prevTasks.filter(task => task._id !== taskId) : []));
 
     try {
       const response = await fetch(`/api/tasks/${taskId}`, {
         method: 'DELETE',
       });
+      
       const data = await response.json();
-      if (!data.success) {
+      console.log('Delete response:', data);
+      
+      if (!response.ok || !data.success) {
         // Revert optimistic update on failure
-        const refreshResponse = await fetch('/api/tasks');
-        const refreshData = await refreshResponse.json();
-        if (refreshData.success && Array.isArray(refreshData.tasks)) {
-          setTasks(refreshData.tasks);
-        }
-        alert("Failed to delete the task on the server.");
+        setTasks(previousTasks);
+        alert(data.error || "Failed to delete the task on the server.");
+      } else {
+        console.log('Task deleted successfully');
+        // Optionally refresh to ensure consistency
+        await refreshTasks();
       }
     } catch (error) {
       console.error("Error deleting task:", error);
       // Revert optimistic update on error
-      try {
-        const refreshResponse = await fetch('/api/tasks');
-        const refreshData = await refreshResponse.json();
-        if (refreshData.success && Array.isArray(refreshData.tasks)) {
-          setTasks(refreshData.tasks);
-        }
-      } catch (refreshError) {
-        console.error("Error refreshing tasks:", refreshError);
-      }
+      setTasks(previousTasks);
       alert("An error occurred while deleting the task.");
     }
   };
 
   const handleDeleteEmployee = async (employeeId) => {
+    if (!employeeId) {
+      console.error('No employee ID provided for deletion');
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this employee?")) {
       return;
     }
 
     // Optimistically update UI
+    const previousEmployees = employees;
     setEmployees(prevEmployees => (Array.isArray(prevEmployees) ? prevEmployees.filter(employee => employee._id !== employeeId) : []));
 
     try {
       const response = await fetch(`/api/users/${employeeId}`, {
         method: 'DELETE',
       });
+      
       const data = await response.json();
-      if (!data.success) {
+      console.log('Delete employee response:', data);
+      
+      if (!response.ok || !data.success) {
         // Revert optimistic update on failure
-        const refreshResponse = await fetch('/api/users');
-        const refreshData = await refreshResponse.json();
-        if (refreshData.success && Array.isArray(refreshData.users)) {
-          setEmployees(refreshData.users);
-        }
+        setEmployees(previousEmployees);
         alert(data.error || "Failed to delete the employee on the server.");
+      } else {
+        console.log('Employee deleted successfully');
+        // Optionally refresh to ensure consistency
+        await refreshEmployees();
       }
     } catch (error) {
       console.error("Error deleting employee:", error);
       // Revert optimistic update on error
-      try {
-        const refreshResponse = await fetch('/api/users');
-        const refreshData = await refreshResponse.json();
-        if (refreshData.success && Array.isArray(refreshData.users)) {
-          setEmployees(refreshData.users);
-        }
-      } catch (refreshError) {
-        console.error("Error refreshing employees:", refreshError);
-      }
+      setEmployees(previousEmployees);
       alert("An error occurred while deleting the employee.");
     }
   };
@@ -197,9 +307,9 @@ export default function TasksPage() {
     }
     
     // If it's a user ID, try to find the employee
-    if (Array.isArray(employees)) {
+    if (Array.isArray(employees) && employees.length > 0) {
       const employee = employees.find(emp => emp._id === assignedTo || emp.email === assignedTo);
-      return employee ? employee.email : assignedTo;
+      return employee ? (employee.name || employee.email) : assignedTo;
     }
     
     return assignedTo || 'Unknown';
@@ -266,10 +376,12 @@ export default function TasksPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tasks.map((task) => {
+                {tasks.map((task, index) => {
+                  const taskId = task?._id || `task-${index}`;
                   const employeeName = getEmployeeName(task?.assignedTo);
+                  
                   return (
-                    <TableRow key={task?._id || Math.random()}>
+                    <TableRow key={taskId}>
                       <TableCell className="font-medium">
                         <div>
                           <div>{task?.title || 'Untitled Task'}</div>
@@ -378,7 +490,7 @@ export default function TasksPage() {
                 Add Your First Employee
               </Button>
             </div>
-            ) : (
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -392,49 +504,55 @@ export default function TasksPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {employees.map((employee) => (
-                  <TableRow key={employee?._id || Math.random()}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={``} alt={employee?.name} />
-                          <AvatarFallback>{employee?.name?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium">{employee?.name || 'Unknown'}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{employee?.email || 'No email'}</TableCell>
-                    <TableCell>
-                      <Badge variant={employee?.role === 'mngr' ? 'default' : 'secondary'}>
-                        {employee?.role === 'mngr' ? 'Manager' : 'Employee'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">{employee?.cid || 'No ID'}</span>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>Edit Employee</DropdownMenuItem>
-                          <DropdownMenuItem>Reset Password</DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteEmployee(employee?._id)}
-                            className="text-destructive"
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {employees.map((employee, index) => {
+                  const employeeId = employee?._id || `employee-${index}`;
+                  
+                  return (
+                    <TableRow key={employeeId}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={``} alt={employee?.name} />
+                            <AvatarFallback>
+                              {employee?.name?.charAt(0)?.toUpperCase() || employee?.email?.charAt(0)?.toUpperCase() || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">{employee?.name || 'Unknown'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{employee?.email || 'No email'}</TableCell>
+                      <TableCell>
+                        <Badge variant={employee?.role === 'mngr' ? 'default' : 'secondary'}>
+                          {employee?.role === 'mngr' ? 'Manager' : 'Employee'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">{employee?.cid || 'No ID'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Toggle menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem>Edit Employee</DropdownMenuItem>
+                            <DropdownMenuItem>Reset Password</DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteEmployee(employee?._id)}
+                              className="text-destructive"
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

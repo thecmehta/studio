@@ -11,6 +11,7 @@ import axios from 'axios';
 
 export default function LoginPage() {
   const router = useRouter();
+    
   const [user, setUser] = useState({
     email: "",
     password: ""
@@ -115,11 +116,6 @@ export default function LoginPage() {
               Don't have an account?{" "}
               <Link href="/manager/signup" className="underline text-primary">
                 Create Account
-              </Link>
-            </div>
-            <div className="text-center text-sm">
-              <Link href="/forgot-password" className="underline text-primary">
-                Forgot your password?
               </Link>
             </div>
           </CardFooter>
