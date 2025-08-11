@@ -1,4 +1,5 @@
-"use client"; 
+"use client";
+
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -30,6 +31,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+
 export default function TasksPage() {
   const [tasks, setTasks] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -38,6 +40,7 @@ export default function TasksPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
+
   // Helper function to refresh tasks
   const refreshTasks = async () => {
     try {
@@ -45,16 +48,16 @@ export default function TasksPage() {
       if (refreshResponse.ok) {
         const refreshData = await refreshResponse.json();
         console.log('Refresh tasks data:', refreshData);
-        
+       
         if (refreshData.success) {
           // Handle nested structure (with pagination)
           if (refreshData.data && Array.isArray(refreshData.data.tasks)) {
             setTasks(refreshData.data.tasks);
-          } 
+          }
           // Handle direct structure (fallback)
           else if (Array.isArray(refreshData.tasks)) {
             setTasks(refreshData.tasks);
-          } 
+          }
           // Handle empty or unexpected structure
           else {
             console.log('No tasks in refresh response');
@@ -74,6 +77,7 @@ export default function TasksPage() {
     }
   };
 
+
   // Helper function to refresh employees
   const refreshEmployees = async () => {
     try {
@@ -81,7 +85,7 @@ export default function TasksPage() {
       if (refreshResponse.ok) {
         const refreshData = await refreshResponse.json();
         console.log('Refresh employees data:', refreshData);
-        
+       
         if (refreshData.success) {
           // Handle nested structure
           if (refreshData.data && Array.isArray(refreshData.data.users)) {
@@ -110,31 +114,32 @@ export default function TasksPage() {
     }
   };
 
+
   useEffect(() => {
     const fetchTasks = async () => {
       setIsLoadingTasks(true);
       setError(''); // Clear any previous errors
-      
+     
       try {
         const response = await fetch('/api/tasks');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+       
         const data = await response.json();
         console.log('Tasks data:', data);
-        
+       
         if (data.success) {
           // Handle nested structure (with pagination)
           if (data.data && Array.isArray(data.data.tasks)) {
             setTasks(data.data.tasks);
             console.log('Set tasks from data.data.tasks:', data.data.tasks.length);
-          } 
+          }
           // Handle direct structure (fallback)
           else if (Array.isArray(data.tasks)) {
             setTasks(data.tasks);
             console.log('Set tasks from data.tasks:', data.tasks.length);
-          } 
+          }
           // Handle empty or unexpected structure
           else {
             console.log('No tasks found or unexpected structure, setting empty array');
@@ -154,15 +159,18 @@ export default function TasksPage() {
       }
     };
 
+
     fetchTasks();
   }, []);
+
 
   useEffect(() => {
     const fetchEmployees = async () => {
       setIsLoadingEmployees(true);
-      
+     
       try {
         const response = await fetch('/api/users');
+        console.log(response)
         if (!response.ok) {
           if (response.status === 401) {
             setError('Please login to access this page');
@@ -171,10 +179,10 @@ export default function TasksPage() {
           }
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+       
         const data = await response.json();
         console.log('Employees data:', data);
-        
+       
         if (data.success) {
           // Handle nested structure
           if (data.data && Array.isArray(data.data.users)) {
@@ -207,16 +215,20 @@ export default function TasksPage() {
       }
     };
 
+
     fetchEmployees();
   }, [router, error]); // Added error to dependencies to prevent overwriting
+
 
   const handleNavigateToAddTask = () => {
     router.push('/dashboard/manager/tasks/addtask');
   };
 
+
   const handleNavigateToAddEmployee = () => {
     router.push('/dashboard/manager/addEmploys');
   };
+
 
   const handleDeleteTask = async (taskId) => {
     if (!taskId) {
@@ -224,22 +236,25 @@ export default function TasksPage() {
       return;
     }
 
+
     if (!window.confirm("Are you sure you want to delete this task?")) {
       return;
     }
+
 
     // Optimistically update UI
     const previousTasks = tasks;
     setTasks(prevTasks => (Array.isArray(prevTasks) ? prevTasks.filter(task => task._id !== taskId) : []));
 
+
     try {
       const response = await fetch(`/api/tasks/${taskId}`, {
         method: 'DELETE',
       });
-      
+     
       const data = await response.json();
       console.log('Delete response:', data);
-      
+     
       if (!response.ok || !data.success) {
         // Revert optimistic update on failure
         setTasks(previousTasks);
@@ -257,28 +272,32 @@ export default function TasksPage() {
     }
   };
 
+
   const handleDeleteEmployee = async (employeeId) => {
     if (!employeeId) {
       console.error('No employee ID provided for deletion');
       return;
     }
 
+
     if (!window.confirm("Are you sure you want to delete this employee?")) {
       return;
     }
+
 
     // Optimistically update UI
     const previousEmployees = employees;
     setEmployees(prevEmployees => (Array.isArray(prevEmployees) ? prevEmployees.filter(employee => employee._id !== employeeId) : []));
 
+
     try {
       const response = await fetch(`/api/users/${employeeId}`, {
         method: 'DELETE',
       });
-      
+     
       const data = await response.json();
       console.log('Delete employee response:', data);
-      
+     
       if (!response.ok || !data.success) {
         // Revert optimistic update on failure
         setEmployees(previousEmployees);
@@ -296,24 +315,26 @@ export default function TasksPage() {
     }
   };
 
+
   // Helper function to get employee name from assignedTo field
   const getEmployeeName = (assignedTo) => {
     // Safety check
     if (!assignedTo) return 'Unknown';
-    
+   
     // If assignedTo is an email, return it
     if (typeof assignedTo === 'string' && assignedTo.includes('@')) {
       return assignedTo;
     }
-    
+   
     // If it's a user ID, try to find the employee
     if (Array.isArray(employees) && employees.length > 0) {
       const employee = employees.find(emp => emp._id === assignedTo || emp.email === assignedTo);
       return employee ? (employee.name || employee.email) : assignedTo;
     }
-    
+   
     return assignedTo || 'Unknown';
   };
+
 
   if (error) {
     return (
@@ -325,6 +346,7 @@ export default function TasksPage() {
       </div>
     );
   }
+
 
   return (
     <div className="space-y-6">
@@ -379,7 +401,7 @@ export default function TasksPage() {
                 {tasks.map((task, index) => {
                   const taskId = task?._id || `task-${index}`;
                   const employeeName = getEmployeeName(task?.assignedTo);
-                  
+                 
                   return (
                     <TableRow key={taskId}>
                       <TableCell className="font-medium">
@@ -387,7 +409,7 @@ export default function TasksPage() {
                           <div>{task?.title || 'Untitled Task'}</div>
                           {task?.description && (
                             <div className="text-sm text-muted-foreground mt-1">
-                              {task.description.length > 50 
+                              {task.description.length > 50
                                 ? task.description.substring(0, 50) + '...'
                                 : task.description
                               }
@@ -457,6 +479,7 @@ export default function TasksPage() {
         </CardContent>
       </Card>
 
+
       {/* Employee Management Section */}
       <Card>
         <CardHeader>
@@ -506,7 +529,7 @@ export default function TasksPage() {
               <TableBody>
                 {employees.map((employee, index) => {
                   const employeeId = employee?._id || `employee-${index}`;
-                  
+                 
                   return (
                     <TableRow key={employeeId}>
                       <TableCell>
@@ -561,3 +584,4 @@ export default function TasksPage() {
     </div>
   );
 }
+

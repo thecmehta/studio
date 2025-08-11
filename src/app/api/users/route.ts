@@ -2,6 +2,7 @@ import { connect } from "@/dbConfig/dbConfig";
 import User from "@/models/userModel";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
+import { cookies } from "next/headers";
 
 connect();
 
@@ -34,7 +35,7 @@ const token = cookieStore.get("token")?.value;
 
     // Fetch users from same company only (exclude password)
     const users = await User.find({ cid: decoded.cid }).select('-password -forgotPasswordToken -forgotPasswordTokenExpiry -verifyToken -verifyTokenExpiry');
-    
+    console.log(users)
     return NextResponse.json({
       message: "Users fetched successfully",
       success: true,
