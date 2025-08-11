@@ -77,7 +77,7 @@ export default function TaskCreationForm() {
         assignedTo: formData.assignedTo.trim(),
         ...(formData.dueDate && { dueDate: formData.dueDate })
       };
-
+      console.log(requestBody);
       const response = await fetch('/api/tasks', {
         method: 'POST',
         headers: {
