@@ -8,7 +8,11 @@ connect();
 export async function GET(request: NextRequest) {
   try {
     // Get token from cookies
-    const token = request.cookies.get("token")?.value;
+    
+
+const cookieStore = await cookies();
+const token = cookieStore.get("token")?.value;
+
     
     if (!token) {
       return NextResponse.json({ 

@@ -2,7 +2,8 @@
 import { connect } from "@/dbConfig/dbConfig";
 import Task from "@/models/taskModel";
 import { NextResponse } from "next/server";
-
+import { cookies } from "next/headers";
+import jwt from "jsonwebtoken";
 // Connect to DB once
 connect();
 
@@ -26,12 +27,22 @@ export async function GET() {
 }
 
 // POST - Create a new task
+
+
 export async function POST(request) {
   try {
+    // 1. Read token from cookies
+    const token =  cookies().get("token")?.value;
+    if (!token) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    // 2. Decode token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log(decoded)
     const { title, description, assignedTo, priority, status, dueDate } =
       await request.json();
 
-    // Basic validation
     if (!title || !description || !assignedTo) {
       return NextResponse.json(
         { error: "Title, description, and assignedTo are required", success: false },
@@ -39,6 +50,7 @@ export async function POST(request) {
       );
     }
 
+    // 3. Create new task including cid & assignedBy from decoded token
     const newTask = new Task({
       title: title.trim(),
       description: description.trim(),
@@ -46,6 +58,8 @@ export async function POST(request) {
       priority: priority || "medium",
       status: status || "pending",
       dueDate: dueDate ? new Date(dueDate) : null,
+      cid: decoded.cid,            // From token
+      assignedBy: decoded.id,      // Manager ID from token
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -65,3 +79,4 @@ export async function POST(request) {
     );
   }
 }
+
